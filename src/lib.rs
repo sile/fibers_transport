@@ -1,3 +1,4 @@
+extern crate bytecodec;
 extern crate fibers;
 extern crate futures;
 #[macro_use]
@@ -12,4 +13,5 @@ pub mod tcp;
 pub mod udp;
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Poll<T> = futures::Poll<T, Error>;
+pub type PollSend = futures::Poll<(), Error>;
+pub type PollRecv<T> = futures::Poll<Option<T>, Error>;
