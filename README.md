@@ -19,7 +19,7 @@ Examples
 
 UDP peers.
 
-```
+```rust
 use bytecodec::bytes::{Utf8Decoder, Utf8Encoder};
 use fibers_transport::{Transport, UdpTransport, UdpTransporter, wait_send, wait_recv};
 
@@ -41,7 +41,7 @@ assert_eq!(item, "foo");
 
 TCP server and client.
 
-```
+```rust
 use bytecodec::fixnum::{U8Decoder, U8Encoder};
 use factory::DefaultFactory;
 use fibers_transport::{Transport, TcpListener, TcpTransport, TcpTransporter, wait_send, wait_recv};
