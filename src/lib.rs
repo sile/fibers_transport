@@ -4,13 +4,17 @@ extern crate futures;
 #[macro_use]
 extern crate trackable;
 
+pub use base::Transport;
 pub use error::{Error, ErrorKind};
+pub use share::RcTransporter;
+pub use tcp::{TcpTransport, TcpTransporter, TcpTransporterBuilder};
+pub use udp::{UdpTransport, UdpTransporter, UdpTransporterBuilder};
 
+mod base;
 mod error;
-
-pub mod base;
-pub mod tcp;
-pub mod udp;
+mod share;
+mod tcp;
+mod udp;
 
 pub type Result<T> = std::result::Result<T, Error>;
 pub type PollSend = futures::Poll<(), Error>;
