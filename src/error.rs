@@ -13,7 +13,11 @@ impl From<std::io::Error> for Error {
 impl From<bytecodec::Error> for Error {
     fn from(f: bytecodec::Error) -> Self {
         let original_error_kind = *f.kind();
-        track!(ErrorKind::CodecError.takes_over(f); original_error_kind).into()
+        if f.concrete_cause::<std::io::Error>().is_some() {
+            track!(ErrorKind::IoError.takes_over(f); original_error_kind).into()
+        } else {
+            track!(ErrorKind::CodecError.takes_over(f); original_error_kind).into()
+        }
     }
 }
 
@@ -21,6 +25,7 @@ impl From<bytecodec::Error> for Error {
 pub enum ErrorKind {
     CodecError,
     IoError,
+    InvalidInput,
     Other,
 }
 impl TrackableErrorKind for ErrorKind {}

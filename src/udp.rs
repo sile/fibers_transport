@@ -15,61 +15,66 @@ pub trait UdpTransport: Transport<PeerAddr = SocketAddr> {}
 ///
 /// [`UdpTransporter`]: ./struct.UdpTransporter.html
 #[derive(Debug, Clone)]
-pub struct UdpTransporterBuilder {
+pub struct UdpTransporterBuilder<E, D> {
     buf_size: usize,
+    encoder: E,
+    decoder: D,
 }
-impl UdpTransporterBuilder {
+impl<E, D> UdpTransporterBuilder<E, D>
+where
+    E: Encode + Default,
+    D: Decode + Default,
+{
     /// Makes a new `UdpTransporterBuilder` instance with the default settings.
     pub fn new() -> Self {
         Self::default()
+    }
+}
+impl<E: Encode, D: Decode> UdpTransporterBuilder<E, D> {
+    pub fn with_codec(encoder: E, decoder: D) -> Self {
+        UdpTransporterBuilder {
+            buf_size: 4096,
+            encoder,
+            decoder,
+        }
     }
 
     /// TODO: Sets the byte size of the receive buffer of the resulting instance.
     ///
     /// The default value is `4096`.
-    pub fn buf_size(&mut self, size: usize) -> &mut Self {
+    pub fn buf_size(mut self, size: usize) -> Self {
         self.buf_size = size;
         self
     }
 
     /// Starts binding to the specified address and will makes
     /// a new `UdpTransporter` instance if the operation is succeeded.
-    pub fn bind<E, D>(
-        &self,
-        addr: SocketAddr,
-    ) -> impl Future<Item = UdpTransporter<E, D>, Error = Error>
-    where
-        E: Encode + Default,
-        D: Decode + Default,
-    {
-        let builder = self.clone();
+    pub fn bind(self, addr: SocketAddr) -> impl Future<Item = UdpTransporter<E, D>, Error = Error> {
         UdpSocket::bind(addr)
-            .map(move |socket| builder.finish(socket))
+            .map(move |socket| self.finish(socket))
             .map_err(|e| track!(Error::from(e)))
     }
 
     /// Makes a new `UdpTransporter` instance with the given settings.
-    pub fn finish<E, D>(&self, socket: UdpSocket) -> UdpTransporter<E, D>
-    where
-        E: Encode + Default,
-        D: Decode + Default,
-    {
+    pub fn finish(self, socket: UdpSocket) -> UdpTransporter<E, D> {
         let recv_from = socket.clone().recv_from(vec![0; self.buf_size]);
         UdpTransporter {
             socket,
-            buf_size: self.buf_size,
-            decoder: D::default(),
-            encoder: E::default(),
+            encoder: self.encoder,
+            decoder: self.decoder,
             outgoing_queue: VecDeque::new(),
             send_to: None,
             recv_from,
-            last_error: None,
         }
     }
 }
-impl Default for UdpTransporterBuilder {
+impl<E, D> Default for UdpTransporterBuilder<E, D>
+where
+    E: Encode + Default,
+    D: Decode + Default,
+{
     fn default() -> Self {
-        UdpTransporterBuilder { buf_size: 4096 }
+        Self::with_codec(E::default(), D::default())
     }
 }
 
@@ -79,13 +84,11 @@ impl Default for UdpTransporterBuilder {
 #[derive(Debug)]
 pub struct UdpTransporter<E: Encode, D: Decode> {
     socket: UdpSocket,
-    buf_size: usize,
-    decoder: D,
     encoder: E,
+    decoder: D,
     outgoing_queue: VecDeque<(SocketAddr, E::Item)>,
     send_to: Option<SendTo<Vec<u8>>>,
     recv_from: RecvFrom<Vec<u8>>,
-    last_error: Option<Error>,
 }
 impl<E, D> UdpTransporter<E, D>
 where
@@ -99,7 +102,8 @@ where
     pub fn bind(addr: SocketAddr) -> impl Future<Item = Self, Error = Error> {
         UdpTransporterBuilder::default().bind(addr)
     }
-
+}
+impl<E: Encode, D: Decode> UdpTransporter<E, D> {
     /// Returns the number of unsent messages in the queue of the instance.
     pub fn message_queue_len(&self) -> usize {
         self.outgoing_queue.len() + if self.encoder.is_idle() { 0 } else { 1 }
@@ -157,11 +161,7 @@ where
         UdpTransporterBuilder::default().finish(f)
     }
 }
-impl<E, D> Transport for UdpTransporter<E, D>
-where
-    E: Encode + Default,
-    D: Decode + Default,
-{
+impl<E: Encode, D: Decode> Transport for UdpTransporter<E, D> {
     type PeerAddr = SocketAddr;
     type SendItem = E::Item;
     type RecvItem = D::Item;
@@ -199,8 +199,4 @@ where
         }
     }
 }
-impl<E, D> UdpTransport for UdpTransporter<E, D>
-where
-    E: Encode + Default,
-    D: Decode + Default,
-{}
+impl<E: Encode, D: Decode> UdpTransport for UdpTransporter<E, D> {}
