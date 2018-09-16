@@ -10,7 +10,10 @@ use base::Transport;
 use {Error, ErrorKind, PollRecv, PollSend, Result};
 
 /// This trait indicates that the implementation implements UDP.
-pub trait UdpTransport: Transport<PeerAddr = SocketAddr> {}
+pub trait UdpTransport: Transport<PeerAddr = SocketAddr> {
+    /// Returns the address to which the instance is bound.
+    fn local_addr(&self) -> SocketAddr;
+}
 
 /// [`UdpTransporter`] builder.
 ///
@@ -50,24 +53,26 @@ impl<E: Encode, D: Decode> UdpTransporterBuilder<E, D> {
     }
 
     /// Makes a new `UdpTransporter` instance with the given settings.
-    pub fn finish(self, socket: UdpSocket) -> UdpTransporter<E, D> {
+    pub fn finish(self, socket: UdpSocket) -> Result<UdpTransporter<E, D>> {
+        let local_addr = track!(socket.local_addr().map_err(Error::from))?;
         let recv_from = socket.clone().recv_from(vec![0; self.buf_size]);
-        UdpTransporter {
+        Ok(UdpTransporter {
             socket,
+            local_addr,
             encoder: self.encoder,
             decoder: self.decoder,
             outgoing_queue: VecDeque::new(),
             send_to: None,
             recv_from,
-        }
+        })
     }
 
     /// Starts binding to the specified address and will makes
     /// a new `UdpTransporter` instance if the operation is succeeded.
     pub fn bind(self, addr: SocketAddr) -> impl Future<Item = UdpTransporter<E, D>, Error = Error> {
         UdpSocket::bind(addr)
-            .map(move |socket| self.finish(socket))
             .map_err(|e| track!(Error::from(e)))
+            .and_then(move |socket| track!(self.finish(socket)))
     }
 }
 impl<E, D> Default for UdpTransporterBuilder<E, D>
@@ -86,6 +91,7 @@ where
 #[derive(Debug)]
 pub struct UdpTransporter<E: Encode, D: Decode> {
     socket: UdpSocket,
+    local_addr: SocketAddr,
     encoder: E,
     decoder: D,
     outgoing_queue: VecDeque<(SocketAddr, E::Item)>,
@@ -100,9 +106,16 @@ where
     /// Starts binding to the specified address and will makes
     /// a new `UdpTransporter` instance if the operation is succeeded.
     ///
-    /// This is equivalent to `UdpTransporterBuilder::default().bind(addr)`.
+    /// This is equivalent to `UdpTransporterBuilder::new().bind(addr)`.
     pub fn bind(addr: SocketAddr) -> impl Future<Item = Self, Error = Error> {
-        UdpTransporterBuilder::default().bind(addr)
+        UdpTransporterBuilder::new().bind(addr)
+    }
+
+    /// Makes a new `UdpTransporter` instance from the given `UdpSocket`.
+    ///
+    /// This is equivalent to `UdpTransporterBuilder::new().finish(socket)`.
+    pub fn from_socket(socket: UdpSocket) -> Result<Self> {
+        UdpTransporterBuilder::new().finish(socket)
     }
 }
 impl<E: Encode, D: Decode> UdpTransporter<E, D> {
@@ -154,15 +167,6 @@ impl<E: Encode, D: Decode> UdpTransporter<E, D> {
         }
     }
 }
-impl<E, D> From<UdpSocket> for UdpTransporter<E, D>
-where
-    E: Encode + Default,
-    D: Decode + Default,
-{
-    fn from(f: UdpSocket) -> Self {
-        UdpTransporterBuilder::default().finish(f)
-    }
-}
 impl<E: Encode, D: Decode> Transport for UdpTransporter<E, D> {
     type PeerAddr = SocketAddr;
     type SendItem = E::Item;
@@ -201,4 +205,8 @@ impl<E: Encode, D: Decode> Transport for UdpTransporter<E, D> {
         }
     }
 }
-impl<E: Encode, D: Decode> UdpTransport for UdpTransporter<E, D> {}
+impl<E: Encode, D: Decode> UdpTransport for UdpTransporter<E, D> {
+    fn local_addr(&self) -> SocketAddr {
+        self.local_addr
+    }
+}

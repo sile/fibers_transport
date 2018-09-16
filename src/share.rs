@@ -85,8 +85,16 @@ impl<T: TcpTransport> TcpTransport for RcTransporter<T> {
     fn peer_addr(&self) -> SocketAddr {
         self.0.borrow().transporter.peer_addr()
     }
+
+    fn local_addr(&self) -> SocketAddr {
+        self.0.borrow().transporter.local_addr()
+    }
 }
-impl<T: UdpTransport> UdpTransport for RcTransporter<T> {}
+impl<T: UdpTransport> UdpTransport for RcTransporter<T> {
+    fn local_addr(&self) -> SocketAddr {
+        self.0.borrow().transporter.local_addr()
+    }
+}
 
 struct Inner<T: Transport> {
     transporter: T,

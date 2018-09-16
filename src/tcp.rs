@@ -12,6 +12,9 @@ use {Error, PollRecv, PollSend, Result};
 pub trait TcpTransport: Transport<PeerAddr = ()> {
     /// Returns the address of the connected peer.
     fn peer_addr(&self) -> SocketAddr;
+
+    /// Returns the address to which the instance is bound.
+    fn local_addr(&self) -> SocketAddr;
 }
 
 /// [`TcpTransporter`] builder.
@@ -54,10 +57,12 @@ impl<E: Encode, D: Decode> TcpTransporterBuilder<E, D> {
     /// Builds a `TcpTransporterBuilder` instance from the given `TcpStream`.
     pub fn finish(self, stream: TcpStream) -> Result<TcpTransporter<E, D>> {
         let _ = stream.set_nodelay(true);
-        let peer = track!(stream.peer_addr().map_err(Error::from))?;
+        let peer_addr = track!(stream.peer_addr().map_err(Error::from))?;
+        let local_addr = track!(stream.peer_addr().map_err(Error::from))?;
         Ok(TcpTransporter {
             stream: BufferedIo::new(stream, self.buf_size, self.buf_size),
-            peer,
+            peer_addr,
+            local_addr,
             encoder: self.encoder,
             decoder: self.decoder,
             outgoing_queue: VecDeque::new(),
@@ -71,7 +76,7 @@ impl<E: Encode, D: Decode> TcpTransporterBuilder<E, D> {
     ) -> impl Future<Item = TcpTransporter<E, D>, Error = Error> {
         TcpStream::connect(peer)
             .map_err(|e| track!(Error::from(e)))
-            .and_then(move |stream| self.finish(stream))
+            .and_then(move |stream| track!(self.finish(stream)))
     }
 }
 impl<E, D> Default for TcpTransporterBuilder<E, D>
@@ -90,7 +95,8 @@ where
 #[derive(Debug)]
 pub struct TcpTransporter<E: Encode, D: Decode> {
     stream: BufferedIo<TcpStream>,
-    peer: SocketAddr,
+    peer_addr: SocketAddr,
+    local_addr: SocketAddr,
     decoder: D,
     encoder: E,
     outgoing_queue: VecDeque<E::Item>,
@@ -204,6 +210,10 @@ impl<E: Encode, D: Decode> Transport for TcpTransporter<E, D> {
 }
 impl<E: Encode, D: Decode> TcpTransport for TcpTransporter<E, D> {
     fn peer_addr(&self) -> SocketAddr {
-        self.peer
+        self.peer_addr
+    }
+
+    fn local_addr(&self) -> SocketAddr {
+        self.local_addr
     }
 }
