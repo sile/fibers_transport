@@ -2,6 +2,9 @@ use bytecodec;
 use std;
 use trackable::error::{ErrorKind as TrackableErrorKind, ErrorKindExt, TrackableError};
 
+/// This crate specific [`Error`] type.
+///
+/// [`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
 #[derive(Debug, Clone)]
 pub struct Error(TrackableError<ErrorKind>);
 derive_traits_for_trackable_error_newtype!(Error, ErrorKind);
@@ -21,11 +24,19 @@ impl From<bytecodec::Error> for Error {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Possible error kinds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
+    /// Encoding/decoding error.
     CodecError,
+
+    /// I/O error.
     IoError,
+
+    /// Input is invalid.
     InvalidInput,
+
+    /// Other error.
     Other,
 }
 impl TrackableErrorKind for ErrorKind {}

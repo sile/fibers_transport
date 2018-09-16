@@ -8,8 +8,15 @@ use std::net::SocketAddr;
 use base::Transport;
 use {Error, PollRecv, PollSend, Result};
 
-pub trait TcpTransport: Transport<PeerAddr = ()> {}
+/// This trait indicates that the implementation implements TCP.
+pub trait TcpTransport: Transport<PeerAddr = ()> {
+    /// Returns the address of the connected peer.
+    fn peer_addr(&self) -> SocketAddr;
+}
 
+/// [`TcpTransporter`] builder.
+///
+/// [`TcpTransporter`]: ./struct.TcpTransporter.html
 #[derive(Debug)]
 pub struct TcpTransporterBuilder<E, D> {
     buf_size: usize,
@@ -21,11 +28,13 @@ where
     E: Encode + Default,
     D: Decode + Default,
 {
+    /// Makes a new `TcpTransporterBuilder` with the default settings.
     pub fn new() -> Self {
         Self::default()
     }
 }
 impl<E: Encode, D: Decode> TcpTransporterBuilder<E, D> {
+    /// Makes a new `TcpTransporterBuilder` with the given encoder and decoder.
     pub fn with_codec(encoder: E, decoder: D) -> Self {
         TcpTransporterBuilder {
             buf_size: 8192,
@@ -34,28 +43,35 @@ impl<E: Encode, D: Decode> TcpTransporterBuilder<E, D> {
         }
     }
 
+    /// Sets the application level read/write buffer size of the resulting instance in byte.
+    ///
+    /// The default value is `8192`.
     pub fn buf_size(mut self, size: usize) -> Self {
         self.buf_size = size;
         self
     }
 
+    /// Builds a `TcpTransporterBuilder` instance from the given `TcpStream`.
+    pub fn finish(self, stream: TcpStream) -> Result<TcpTransporter<E, D>> {
+        let _ = stream.set_nodelay(true);
+        let peer = track!(stream.peer_addr().map_err(Error::from))?;
+        Ok(TcpTransporter {
+            stream: BufferedIo::new(stream, self.buf_size, self.buf_size),
+            peer,
+            encoder: self.encoder,
+            decoder: self.decoder,
+            outgoing_queue: VecDeque::new(),
+        })
+    }
+
+    /// Builds a `TcpTransporterBuilder` instance by connecting to the specified peer.
     pub fn connect(
         self,
         peer: SocketAddr,
     ) -> impl Future<Item = TcpTransporter<E, D>, Error = Error> {
         TcpStream::connect(peer)
-            .map(move |stream| self.finish(stream))
             .map_err(|e| track!(Error::from(e)))
-    }
-
-    pub fn finish(self, stream: TcpStream) -> TcpTransporter<E, D> {
-        let _ = stream.set_nodelay(true);
-        TcpTransporter {
-            stream: BufferedIo::new(stream, self.buf_size, self.buf_size),
-            encoder: self.encoder,
-            decoder: self.decoder,
-            outgoing_queue: VecDeque::new(),
-        }
+            .and_then(move |stream| self.finish(stream))
     }
 }
 impl<E, D> Default for TcpTransporterBuilder<E, D>
@@ -74,6 +90,7 @@ where
 #[derive(Debug)]
 pub struct TcpTransporter<E: Encode, D: Decode> {
     stream: BufferedIo<TcpStream>,
+    peer: SocketAddr,
     decoder: D,
     encoder: E,
     outgoing_queue: VecDeque<E::Item>,
@@ -85,8 +102,17 @@ where
 {
     /// Starts connecting to the given peer and
     /// will return a new `TcpTransporter` instance if the connect operation is succeeded.
+    ///
+    /// This is equivalent to `TcpTransporterBuilder::new().connect(peer)`.
     pub fn connect(peer: SocketAddr) -> impl Future<Item = Self, Error = Error> {
         TcpTransporterBuilder::new().connect(peer)
+    }
+
+    /// Makes a new `TcpTransporter` instance from the given `TcpStream`.
+    ///
+    /// This is equivalent to `TcpTransporterBuilder::new().finish(stream)`.
+    pub fn from_stream(stream: TcpStream) -> Result<Self> {
+        TcpTransporterBuilder::new().finish(stream)
     }
 }
 impl<E: Encode, D: Decode> TcpTransporter<E, D> {
@@ -123,15 +149,6 @@ impl<E: Encode, D: Decode> TcpTransporter<E, D> {
     /// Returns a mutable reference to the encoder being used by the instance.
     pub fn encoder_mut(&mut self) -> &mut E {
         &mut self.encoder
-    }
-}
-impl<E, D> From<TcpStream> for TcpTransporter<E, D>
-where
-    E: Encode + Default,
-    D: Decode + Default,
-{
-    fn from(stream: TcpStream) -> Self {
-        TcpTransporterBuilder::new().finish(stream)
     }
 }
 impl<E: Encode, D: Decode> Transport for TcpTransporter<E, D> {
@@ -185,4 +202,8 @@ impl<E: Encode, D: Decode> Transport for TcpTransporter<E, D> {
         }
     }
 }
-impl<E: Encode, D: Decode> TcpTransport for TcpTransporter<E, D> {}
+impl<E: Encode, D: Decode> TcpTransport for TcpTransporter<E, D> {
+    fn peer_addr(&self) -> SocketAddr {
+        self.peer
+    }
+}

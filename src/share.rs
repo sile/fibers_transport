@@ -1,14 +1,17 @@
 use futures::Async;
 use std::cell::RefCell;
 use std::fmt;
+use std::net::SocketAddr;
 use std::rc::Rc;
 
 use base::Transport;
-use {PollRecv, PollSend, Result};
+use {PollRecv, PollSend, Result, TcpTransport, UdpTransport};
 
+/// Shareable transporter.
 #[derive(Debug)]
 pub struct RcTransporter<T: Transport>(Rc<RefCell<Inner<T>>>);
 impl<T: Transport> RcTransporter<T> {
+    /// Makes a new `RcTransporter` instance.
     pub fn new(inner: T) -> Self {
         let inner = Inner {
             transporter: inner,
@@ -17,6 +20,7 @@ impl<T: Transport> RcTransporter<T> {
         RcTransporter(Rc::new(RefCell::new(inner)))
     }
 
+    /// Executes the given function with a reference to the inner transporter.
     pub fn with_inner_ref<F, U>(&self, f: F) -> U
     where
         F: FnOnce(&T) -> U,
@@ -24,6 +28,7 @@ impl<T: Transport> RcTransporter<T> {
         f(&self.0.borrow().transporter)
     }
 
+    /// Executes the given function with a mutable reference to the inner transporter.
     pub fn with_inner_mut<F, U>(&mut self, f: F) -> U
     where
         F: FnOnce(&mut T) -> U,
@@ -31,6 +36,9 @@ impl<T: Transport> RcTransporter<T> {
         f(&mut self.0.borrow_mut().transporter)
     }
 
+    /// Executes the given function with the next incoming item if it is available.
+    ///
+    /// If there is no such item, this will return `Ok(None)` without executing `f`.
     pub fn with_peek_recv<F, U>(&mut self, f: F) -> Result<Option<U>>
     where
         F: FnOnce(&T::PeerAddr, &T::RecvItem) -> U,
@@ -73,6 +81,12 @@ impl<T: Transport> Transport for RcTransporter<T> {
         }
     }
 }
+impl<T: TcpTransport> TcpTransport for RcTransporter<T> {
+    fn peer_addr(&self) -> SocketAddr {
+        self.0.borrow().transporter.peer_addr()
+    }
+}
+impl<T: UdpTransport> UdpTransport for RcTransporter<T> {}
 
 struct Inner<T: Transport> {
     transporter: T,

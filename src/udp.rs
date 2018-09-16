@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 use base::Transport;
 use {Error, ErrorKind, PollRecv, PollSend, Result};
 
+/// This trait indicates that the implementation implements UDP.
 pub trait UdpTransport: Transport<PeerAddr = SocketAddr> {}
 
 /// [`UdpTransporter`] builder.
@@ -31,6 +32,7 @@ where
     }
 }
 impl<E: Encode, D: Decode> UdpTransporterBuilder<E, D> {
+    /// Makes a new `UdpTransporterBuilder` instance with the given encoder and decoder.
     pub fn with_codec(encoder: E, decoder: D) -> Self {
         UdpTransporterBuilder {
             buf_size: 4096,
@@ -39,20 +41,12 @@ impl<E: Encode, D: Decode> UdpTransporterBuilder<E, D> {
         }
     }
 
-    /// TODO: Sets the byte size of the receive buffer of the resulting instance.
+    /// Sets the size of the send and receive buffer of the resulting instance in byte.
     ///
     /// The default value is `4096`.
     pub fn buf_size(mut self, size: usize) -> Self {
         self.buf_size = size;
         self
-    }
-
-    /// Starts binding to the specified address and will makes
-    /// a new `UdpTransporter` instance if the operation is succeeded.
-    pub fn bind(self, addr: SocketAddr) -> impl Future<Item = UdpTransporter<E, D>, Error = Error> {
-        UdpSocket::bind(addr)
-            .map(move |socket| self.finish(socket))
-            .map_err(|e| track!(Error::from(e)))
     }
 
     /// Makes a new `UdpTransporter` instance with the given settings.
@@ -66,6 +60,14 @@ impl<E: Encode, D: Decode> UdpTransporterBuilder<E, D> {
             send_to: None,
             recv_from,
         }
+    }
+
+    /// Starts binding to the specified address and will makes
+    /// a new `UdpTransporter` instance if the operation is succeeded.
+    pub fn bind(self, addr: SocketAddr) -> impl Future<Item = UdpTransporter<E, D>, Error = Error> {
+        UdpSocket::bind(addr)
+            .map(move |socket| self.finish(socket))
+            .map_err(|e| track!(Error::from(e)))
     }
 }
 impl<E, D> Default for UdpTransporterBuilder<E, D>
