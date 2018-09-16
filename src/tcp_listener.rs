@@ -6,7 +6,7 @@ use fibers::net::TcpListener as RawTcpListener;
 use futures::{Async, Future, Poll, Stream};
 use std::net::SocketAddr;
 
-use {Error, TcpTransporter, TcpTransporterBuilder};
+use {Error, Result, TcpTransporter, TcpTransporterBuilder};
 
 /// [`TcpListener`] builder.
 ///
@@ -44,13 +44,15 @@ where
     }
 
     /// Builds a new `TcpListener` instance from the given `RawTcpListener`.
-    pub fn finish(self, listener: RawTcpListener) -> TcpListener<E, D> {
-        TcpListener {
+    pub fn finish(self, listener: RawTcpListener) -> Result<TcpListener<E, D>> {
+        let local_addr = track!(listener.local_addr().map_err(Error::from))?;
+        Ok(TcpListener {
             incoming: listener.incoming(),
+            local_addr,
             encoder_factory: self.encoder_factory,
             decoder_factory: self.decoder_factory,
             client_futures: Vec::new(),
-        }
+        })
     }
 
     /// Builds a new `TcpListener` instance that binds to and listens in the given address.
@@ -59,7 +61,7 @@ where
         bind_addr: SocketAddr,
     ) -> impl Future<Item = TcpListener<E, D>, Error = Error> {
         track_err!(RawTcpListener::bind(bind_addr).map_err(Error::from))
-            .map(move |listener| self.finish(listener))
+            .and_then(move |listener| track!(self.finish(listener)))
     }
 }
 impl<E, D> Default for TcpListenerBuilder<E, D>
@@ -79,6 +81,7 @@ where
 #[derive(Debug)]
 pub struct TcpListener<E, D> {
     incoming: Incoming,
+    local_addr: SocketAddr,
     encoder_factory: E,
     decoder_factory: D,
     client_futures: Vec<Connected>,
@@ -95,6 +98,11 @@ where
     /// This is equivalent to `TcpListenerBuilder::new().listen(bind_addr)`.
     pub fn listen(bind_addr: SocketAddr) -> impl Future<Item = Self, Error = Error> {
         TcpListenerBuilder::new().listen(bind_addr)
+    }
+
+    /// Returns the address on which the listener is listening.
+    pub fn local_addr(&self) -> SocketAddr {
+        self.local_addr
     }
 }
 impl<E, D> Stream for TcpListener<E, D>
@@ -128,16 +136,5 @@ where
             }
         }
         Ok(Async::NotReady)
-    }
-}
-impl<E, D> From<RawTcpListener> for TcpListener<E, D>
-where
-    E: Factory + Default,
-    D: Factory + Default,
-    E::Item: Encode,
-    D::Item: Decode,
-{
-    fn from(f: RawTcpListener) -> Self {
-        TcpListenerBuilder::new().finish(f)
     }
 }

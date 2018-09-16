@@ -9,3 +9,6 @@ factory = "0.1"
 fibers = "0.1"
 futures = "0.1"
 trackable = "0.2"
+
+[dev-dependencies]
+fibers_global = "0.1"

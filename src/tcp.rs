@@ -58,7 +58,7 @@ impl<E: Encode, D: Decode> TcpTransporterBuilder<E, D> {
     pub fn finish(self, stream: TcpStream) -> Result<TcpTransporter<E, D>> {
         let _ = stream.set_nodelay(true);
         let peer_addr = track!(stream.peer_addr().map_err(Error::from))?;
-        let local_addr = track!(stream.peer_addr().map_err(Error::from))?;
+        let local_addr = track!(stream.local_addr().map_err(Error::from))?;
         Ok(TcpTransporter {
             stream: BufferedIo::new(stream, self.buf_size, self.buf_size),
             peer_addr,
