@@ -88,6 +88,7 @@ extern crate trackable;
 
 pub use base::{wait_recv, wait_send, Transport};
 pub use error::{Error, ErrorKind};
+pub use fixed_peer::FixedPeerTransporter;
 pub use share::RcTransporter;
 pub use tcp::{TcpTransport, TcpTransporter, TcpTransporterBuilder};
 pub use tcp_listener::{TcpListener, TcpListenerBuilder};
@@ -95,6 +96,7 @@ pub use udp::{UdpTransport, UdpTransporter, UdpTransporterBuilder};
 
 mod base;
 mod error;
+mod fixed_peer;
 mod share;
 mod tcp;
 mod tcp_listener;

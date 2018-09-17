@@ -1,11 +1,13 @@
 use futures::{Async, Future, Poll};
+use std::fmt::Debug;
+use std::hash::Hash;
 
 use {Error, ErrorKind, PollRecv, PollSend, Result};
 
 /// This trait allows for sending and receiving items between peers.
 pub trait Transport {
     /// Peer address.
-    type PeerAddr;
+    type PeerAddr: Eq + Clone + Hash + Debug;
 
     /// Outgoing item.
     type SendItem;
