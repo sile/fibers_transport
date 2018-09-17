@@ -1,9 +1,7 @@
 use futures::Async;
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::net::SocketAddr;
 
-use {ErrorKind, PollRecv, PollSend, Result, TcpTransport, Transport, UdpTransport};
+use {ErrorKind, PeerAddr, PollRecv, PollSend, Result, TcpTransport, Transport, UdpTransport};
 
 /// An implementation of [`Transport`] used for communicating with a fixed peer.
 ///
@@ -44,11 +42,7 @@ impl<T: Transport, P> FixedPeerTransporter<T, P> {
         &self.interior_peer
     }
 }
-impl<T, P> Transport for FixedPeerTransporter<T, P>
-where
-    T: Transport,
-    P: Clone + Eq + Hash + Debug,
-{
+impl<T: Transport, P: PeerAddr> Transport for FixedPeerTransporter<T, P> {
     type PeerAddr = P;
     type SendItem = T::SendItem;
     type RecvItem = T::RecvItem;
