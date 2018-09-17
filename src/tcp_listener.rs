@@ -128,6 +128,7 @@ where
             if let Async::Ready(stream) =
                 track!(self.client_futures[i].poll().map_err(Error::from))?
             {
+                self.client_futures.swap_remove(i);
                 let encoder = self.encoder_factory.create();
                 let decoder = self.decoder_factory.create();
                 let transporter =
