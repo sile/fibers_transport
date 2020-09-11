@@ -5,9 +5,8 @@ use trackable::error::{ErrorKind as TrackableErrorKind, ErrorKindExt, TrackableE
 /// This crate specific [`Error`] type.
 ///
 /// [`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TrackableError)]
 pub struct Error(TrackableError<ErrorKind>);
-derive_traits_for_trackable_error_newtype!(Error, ErrorKind);
 impl From<std::io::Error> for Error {
     fn from(f: std::io::Error) -> Self {
         ErrorKind::IoError.cause(f).into()
