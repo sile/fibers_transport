@@ -197,8 +197,9 @@ impl<E: Encode, D: Decode> Transport for UdpTransporter<E, D> {
             .poll()
             .map_err(|(_, _, e)| track!(Error::from(e)))?
         {
-            let item = track!(self.decoder.decode_from_bytes(&buf[..size]))?;
+            let result = track!(self.decoder.decode_from_bytes(&buf[..size]); peer);
             self.recv_from = socket.recv_from(buf);
+            let item = result?;
             Ok(Async::Ready(Some((peer, item))))
         } else {
             Ok(Async::NotReady)
