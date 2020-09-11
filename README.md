@@ -3,8 +3,8 @@ fibers_transport
 
 [![Crates.io: fibers_transport](https://img.shields.io/crates/v/fibers_transport.svg)](https://crates.io/crates/fibers_transport)
 [![Documentation](https://docs.rs/fibers_transport/badge.svg)](https://docs.rs/fibers_transport)
-[![Build Status](https://travis-ci.org/sile/fibers_transport.svg?branch=master)](https://travis-ci.org/sile/fibers_transport)
-[![Code Coverage](https://codecov.io/gh/sile/fibers_transport/branch/master/graph/badge.svg)](https://codecov.io/gh/sile/fibers_transport/branch/master)
+[![Actions Status](https://github.com/sile/fibers_transport/workflows/CI/badge.svg)](https://github.com/sile/fibers_transport/actions)
+[![Coverage Status](https://coveralls.io/repos/github/sile/fibers_transport/badge.svg?branch=master)](https://coveralls.io/github/sile/fibers_transport?branch=master)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Transport layer abstraction built on top of [`fibers`] crate.
