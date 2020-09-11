@@ -66,9 +66,11 @@ impl<T: Transport, P: PeerAddr> Transport for FixedPeerTransporter<T, P> {
             match self.inner.poll_recv()? {
                 Async::NotReady => return Ok(Async::NotReady),
                 Async::Ready(None) => return Ok(Async::Ready(None)),
-                Async::Ready(Some((peer, item))) => if peer == self.interior_peer {
-                    return Ok(Async::Ready(Some((self.exterior_peer.clone(), item))));
-                },
+                Async::Ready(Some((peer, item))) => {
+                    if peer == self.interior_peer {
+                        return Ok(Async::Ready(Some((self.exterior_peer.clone(), item))));
+                    }
+                }
             }
         }
     }

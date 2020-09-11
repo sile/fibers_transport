@@ -171,10 +171,9 @@ impl<E: Encode, D: Decode> Transport for TcpTransporter<E, D> {
     fn poll_send(&mut self) -> PollSend {
         loop {
             track!(self.stream.execute_io())?;
-            track!(
-                self.encoder
-                    .encode_to_write_buf(self.stream.write_buf_mut())
-            )?;
+            track!(self
+                .encoder
+                .encode_to_write_buf(self.stream.write_buf_mut()))?;
             if self.encoder.is_idle() {
                 if let Some(item) = self.outgoing_queue.pop_front() {
                     track!(self.encoder.start_encoding(item))?;
@@ -191,10 +190,9 @@ impl<E: Encode, D: Decode> Transport for TcpTransporter<E, D> {
     fn poll_recv(&mut self) -> PollRecv<(Self::PeerAddr, Self::RecvItem)> {
         loop {
             track!(self.stream.execute_io())?;
-            track!(
-                self.decoder
-                    .decode_from_read_buf(self.stream.read_buf_mut())
-            )?;
+            track!(self
+                .decoder
+                .decode_from_read_buf(self.stream.read_buf_mut()))?;
             if self.decoder.is_idle() {
                 let item = track!(self.decoder.finish_decoding())?;
                 return Ok(Async::Ready(Some(((), item))));
