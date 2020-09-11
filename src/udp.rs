@@ -1,3 +1,5 @@
+use crate::base::Transport;
+use crate::{Error, ErrorKind, PollRecv, PollSend, Result};
 use bytecodec::{Decode, DecodeExt, Encode, EncodeExt};
 use fibers::net::futures::{RecvFrom, SendTo};
 use fibers::net::UdpSocket;
@@ -5,9 +7,6 @@ use futures::Poll;
 use futures::{Async, Future};
 use std::collections::VecDeque;
 use std::net::SocketAddr;
-
-use base::Transport;
-use {Error, ErrorKind, PollRecv, PollSend, Result};
 
 /// This trait indicates that the implementation implements UDP.
 pub trait UdpTransport: Transport<PeerAddr = SocketAddr> {

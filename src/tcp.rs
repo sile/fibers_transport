@@ -1,12 +1,11 @@
+use crate::base::Transport;
+use crate::{Error, PollRecv, PollSend, Result};
 use bytecodec::io::{BufferedIo, IoDecodeExt, IoEncodeExt};
 use bytecodec::{Decode, Encode};
 use fibers::net::TcpStream;
 use futures::{Async, Future};
 use std::collections::VecDeque;
 use std::net::SocketAddr;
-
-use base::Transport;
-use {Error, PollRecv, PollSend, Result};
 
 /// This trait indicates that the implementation implements TCP.
 pub trait TcpTransport: Transport<PeerAddr = ()> {

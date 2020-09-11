@@ -1,3 +1,4 @@
+use crate::{Error, Result, TcpTransporter, TcpTransporterBuilder};
 use bytecodec::{Decode, Encode};
 use factory::Factory;
 use fibers::net::futures::Connected;
@@ -5,8 +6,6 @@ use fibers::net::streams::Incoming;
 use fibers::net::TcpListener as RawTcpListener;
 use futures::{Async, Future, Poll, Stream};
 use std::net::SocketAddr;
-
-use {Error, Result, TcpTransporter, TcpTransporterBuilder};
 
 /// [`TcpListener`] builder.
 ///

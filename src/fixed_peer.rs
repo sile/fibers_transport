@@ -1,7 +1,8 @@
+use crate::{
+    ErrorKind, PeerAddr, PollRecv, PollSend, Result, TcpTransport, Transport, UdpTransport,
+};
 use futures::Async;
 use std::net::SocketAddr;
-
-use {ErrorKind, PeerAddr, PollRecv, PollSend, Result, TcpTransport, Transport, UdpTransport};
 
 /// An implementation of [`Transport`] used for communicating with a fixed peer.
 ///

@@ -1,6 +1,5 @@
+use crate::{Error, ErrorKind, PeerAddr, PollRecv, PollSend, Result};
 use futures::{Async, Future, Poll};
-
-use {Error, ErrorKind, PeerAddr, PollRecv, PollSend, Result};
 
 /// This trait allows for sending and receiving items between peers.
 pub trait Transport {

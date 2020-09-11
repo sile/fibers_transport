@@ -1,11 +1,10 @@
+use crate::base::Transport;
+use crate::{PollRecv, PollSend, Result, TcpTransport, UdpTransport};
 use futures::Async;
 use std::cell::RefCell;
 use std::fmt;
 use std::net::SocketAddr;
 use std::rc::Rc;
-
-use base::Transport;
-use {PollRecv, PollSend, Result, TcpTransport, UdpTransport};
 
 /// Shareable transporter.
 #[derive(Debug)]
